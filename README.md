@@ -4,7 +4,6 @@
 - Solve the example control task "Trading Bot"
 - Implements Rainbow Deep Q Learning algorithm:
 
-  - Target Network
   - Double DQN
   - Deuling DQN
   - Prioritized Experience Replay
@@ -14,5 +13,6 @@
 
 ## References
 
-- [Advanced Deep Q Networks](https://www.udemy.com/course/advanced-deep-qnetworks/)
-- [Trading Bot](https://github.com/pskrunner14/trading-bot)
+- [Rainbow DQN whitepaper](https://arxiv.org/pdf/1710.02298.pdf)
+- [Advanced Deep Q Networks course](https://www.udemy.com/course/advanced-deep-qnetworks/)
+- [Trading Bot example](https://github.com/pskrunner14/trading-bot)
