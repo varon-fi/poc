@@ -2,10 +2,10 @@
 
 - Solve the example control task "Qbert"
 - Solve the example control task "Trading Bot"
-- Implements Rainbow Deep Q Learning algorithm:
+- Implements Rainbow Deep Q-Network algorithm:
 
   - Double DQN
-  - Deuling DQN
+  - Dueling DQN
   - Prioritized Experience Replay
   - Noisy DQN
   - N-Step DQN
