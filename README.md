@@ -1,5 +1,8 @@
 # Implement Rainbow DQN for solving Markov Decision Processes
 
+**THIS CODE IS FOR RESEARCH PURPOSES ONLY AND IS NOT TO BE USED FOR TRADING
+OR FINANCIAL ADVICE!**
+
 - Solve the example control task "Qbert"
 - Solve the example control task "Trading Bot"
 - Implements Rainbow Deep Q-Network algorithm:
