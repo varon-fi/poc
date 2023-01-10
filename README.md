@@ -1,4 +1,4 @@
-# Rainbow DQN for solving Markov Decision Processes
+# Implement Rainbow DQN for solving Markov Decision Processes
 
 - Solve the example control task "Qbert"
 - Solve the example control task "Trading Bot"
