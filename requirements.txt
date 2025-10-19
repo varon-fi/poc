@@ -1,0 +1,8 @@
+# DRQN Model Requirements
+torch>=2.0.0
+numpy>=1.24.0
+pandas>=2.0.0
+matplotlib>=3.7.0
+tensorboard>=2.13.0
+jupyter>=1.0.0
+yfinance>=0.2.18
