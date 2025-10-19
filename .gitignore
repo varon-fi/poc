@@ -1,3 +1,5 @@
 .ipynb_checkpoints
 lightning_logs
+runs
+models
 videos
