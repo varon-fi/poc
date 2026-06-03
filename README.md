@@ -1,6 +1,6 @@
 # DRQN Model - Deep Recurrent Q-Network for Stock Trading
 
-A production-ready Deep Recurrent Q-Network (DRQN) implementation for algorithmic trading, following the published approach from [conditionWang/DRQN_Stock_Trading](https://github.com/conditionWang/DRQN_Stock_Trading). This implementation includes **Action Augmentation** and proper reward structures that achieve significant outperformance over buy-and-hold strategies.
+A proof-of-concept Deep Recurrent Q-Network (DRQN) implementation for algorithmic trading, following the published approach from [conditionWang/DRQN_Stock_Trading](https://github.com/conditionWang/DRQN_Stock_Trading). This implementation includes **Action Augmentation** and proper reward structures that achieve significant outperformance over buy-and-hold strategies.
 
 ## Quick Start
 
@@ -240,13 +240,6 @@ The validation script provides comprehensive metrics:
 - **✅ Generalization**: Works across different stocks and time periods
 - **✅ Action Augmentation**: Successfully learns from all possible actions at each state
 
-## Success Story
+## Disclaimer
 
-This implementation successfully follows the [published DRQN paper](https://github.com/conditionWang/DRQN_Stock_Trading) and achieves the key innovations:
-
-1. **Action Augmentation**: The model evaluates all possible actions (Bear/Hold/Bull) at each state, not just the chosen one
-2. **Proper Reward Structure**: Uses the paper's exact trading logic with borrowed positions
-3. **Volatile Training**: Trains on diverse market conditions (2020-2023) to learn robust strategies
-4. **Outstanding Performance**: Achieves 500%+ outperformance over buy-and-hold baselines
-
-The model correctly learned that in 2024's bull market, buying (Bull) was the optimal strategy, while also using Hold actions when appropriate. This demonstrates successful learning of market-adaptive trading strategies.
+This project is provided for research and educational purposes only. It is a proof of concept and is not intended for live trading, investment decision-making, or production use. Nothing in this repository constitutes financial advice. Use at your own risk.
