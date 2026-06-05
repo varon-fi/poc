@@ -1,252 +1,98 @@
-# DRQN Model - Deep Recurrent Q-Network for Stock Trading
+# Directional Trading POC — Hyperliquid Perps
 
-A production-ready Deep Recurrent Q-Network (DRQN) implementation for algorithmic trading, following the published approach from [conditionWang/DRQN_Stock_Trading](https://github.com/conditionWang/DRQN_Stock_Trading). This implementation includes **Action Augmentation** and proper reward structures that achieve significant outperformance over buy-and-hold strategies.
+Research POC for a **directional** (long / flat / short) trading strategy on Hyperliquid
+perpetual futures. After an exhaustive, leakage-disciplined search across approaches, the
+strategy that survives honest out-of-sample, cost- and funding-aware validation is classic
+**trend-following**: a moving-average crossover at the 4-hour horizon.
 
-## Quick Start
+> **Deliverable:** [`mom_perp_poc.ipynb`](mom_perp_poc.ipynb) — self-contained, reproducible.
 
-### 1. Install Dependencies
+## TL;DR result
+
+**4h MA-crossover (24/96), equal-weight long/short across 7 liquid core perps**
+(BTC, ETH, SOL, LINK, ARB, OP, HYPER), on **real Hyperliquid data**, held-out test
+(2026-02-26 → 2026-06-05), net of 4.5 bps taker fee:
+
+| Metric (held-out test) | Strategy (20% APR funding) | Strategy (no funding) | Buy & Hold | Always-Flat |
+| --- | --- | --- | --- | --- |
+| Return | **+18.5%** | +25.2% | −19.3% | 0% |
+| Annualized Sharpe | **1.59** | 2.03 | −1.12 | 0 |
+| Max drawdown | 18% | 17% | 36% | 0% |
+
+Robustness: broad parameter plateau (19/30 fast×slow configs survive funding + walk-forward),
+positive on 5–6 of 7 symbols, 4/6 walk-forward folds positive, survives funding to ~50% APR
+(turnover only ~0.02 flips/bar), and positive in **both** up- and down-market sub-periods.
+It made money while buy-hold lost 19% → genuine two-sided trend capture, not long beta.
+
+## ⚠️ Honest caveats — this is a paper-probe, not a funded strategy
+
+- The dataset is **~8 months and mostly one regime** (a sustained alt-bear). The up-market
+  evidence is a short window; the two oldest walk-forward folds are negative. A sustained
+  **bull / chop** out-of-sample is **unproven**.
+- Treat this as **paper-probe grade**. The right next step is forward **shadow → paper**
+  validation to accumulate genuine out-of-sample data across regimes (the platform already
+  streams live Hyperliquid data) before any capital is sized.
+
+## Quick start
+
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt          # numpy, pandas, matplotlib suffice for the POC
+jupyter nbconvert --to notebook --execute --inplace mom_perp_poc.ipynb
+# or open interactively:
+jupyter notebook mom_perp_poc.ipynb
 ```
 
-### 2. Train a Model
-```bash
-python3 train_drqn.py --ticker AAPL --start_date 2020-01-01 --end_date 2023-12-31 --episodes 100 --save_model --plot
-```
+The notebook loads bundled real data (`data/hyperliquid_4h_core.csv`), runs the leakage-free
+backtest, walk-forward, per-symbol and regime breakdowns, funding stress, and baselines, then
+writes artifacts to `validation_results/`.
 
-### 3. Validate the Model
-```bash
-python3 validate_drqn.py --model_path logs/models/drqn_AAPL_ep100_lr0.001_bal100000_20251019_144326_model.pt --ticker AAPL --start_date 2024-01-01 --end_date 2024-12-31 --save_results --plot
-```
+## Data
 
-### 4. Interactive Development
-```bash
-jupyter notebook drqn_trading.ipynb
-```
+- **Source:** real Hyperliquid 4h OHLC for the core perps, exported from the platform
+  Postgres `ohlcs` table (the live ingestion the platform collects). Bundled as
+  `data/hyperliquid_4h_core.csv` for reproducibility.
+- **Refresh:** the last cell of the notebook contains an optional helper to re-pull candles
+  from the public Hyperliquid API (`/info` `candleSnapshot`) — no keys required.
 
-## Features
+## Methodology / anti-overfitting discipline
 
-- **✅ Action Augmentation**: Evaluates all possible actions at each state (key innovation from the paper)
-- **✅ Proper Reward Structure**: Follows the published paper's trading logic exactly
-- **✅ Production Ready**: CLI training and validation scripts with comprehensive logging
-- **✅ TensorBoard Integration**: Real-time training monitoring and visualization
-- **✅ Cross-Validation**: Test models on different stocks and time periods
-- **✅ Outstanding Performance**: Achieves 500%+ outperformance over buy-and-hold
-- **✅ Interactive Development**: Jupyter notebook for experimentation
+These are the practices that separated the real edge from artifacts:
 
-## Architecture
+- **No lookahead:** signals use only data up to bar *t*; PnL uses the next-bar return.
+  Momentum/MA windows are computed on **full per-symbol history** (a head-of-window slice
+  bug had previously inflated results — fixed and re-baselined).
+- **Realistic costs:** taker fee on turnover **and** perp **funding** drag on held exposure
+  (stress-tested 0–50% APR). High-turnover strategies that ignore this look great and aren't.
+- **Walk-forward** (6 contiguous OOS folds), **regime split** (up vs down market),
+  **per-symbol** breakdown, and **parameter-plateau** checks (robust region, not a single
+  lucky config).
+- **Baselines:** every result is judged against **always-flat** and **buy & hold**.
 
-### **Core Components:**
-- **DRQN Model**: LSTM-based Q-network for sequential decision making
-- **Action Augmentation**: Evaluates all possible actions (Bear/Hold/Bull) at each state
-- **Trading Environment**: Position-based trading (-1, 0, 1) following the paper's exact logic
-- **Reward Structure**: Based on actual profit/loss from borrowed positions
-- **Data Processing**: OHLC data with 8 delayed log returns + time features
-- **Training Pipeline**: Experience replay with target networks and early stopping
+## Research journey — why trend-following, and what was rejected
 
-### **Key Innovations from Paper:**
-1. **Action Augmentation**: Store experiences for ALL possible actions, not just the chosen one
-2. **Borrowed Positions**: Bull = borrow money to buy, Bear = borrow stocks to sell
-3. **Balance Management**: Balance absorbs profits/losses, doesn't buy stocks directly
-4. **Volatile Training**: Train on diverse market conditions (2020-2023) for robust learning
+This repo began as a reproduction of [conditionWang/DRQN_Stock_Trading](https://github.com/conditionWang/DRQN_Stock_Trading)
+(see `drqn_trading.ipynb`, `train_drqn.py`, `validate_drqn.py`). The honest findings:
 
-## CLI Usage
+1. **The DRQN reference's headline returns were a leverage artifact** — it trades a fixed
+   *share* count financed by borrowing (the balance only absorbs P&L), i.e. implicit
+   ~2–70× leverage with no equity floor. Remove the leverage and the edge disappears.
+2. **High-frequency / microstructure directional** (1–5 min; order-book imbalance, OFI, CVD
+   from the platform's `features_microstructure`) has **no edge after taker costs** —
+   information coefficients ≈ 0 and flip sign out-of-sample. Microstructure alpha is a
+   maker / market-making phenomenon, out of scope for a directional taker strategy.
+3. **RL / ML** (QR-DQN, LightGBM) **overfit and underperformed a simple rule.** Algorithm
+   sophistication was not the lever; cost realism and evaluation discipline were.
+4. **Plain `sign(momentum)` TSMOM** only looked good due to the head-of-window bug + ignoring
+   funding; corrected, its entire edge was the short leg in one regime.
+5. **MA-crossover trend-following won** because its hysteresis slashes turnover (so funding
+   and fees are amortized) and it captures trend two-sidedly — the most-documented systematic
+   edge in finance (managed futures / CTAs), now validated on Hyperliquid perps.
 
-### Basic Training
-```bash
-python train_drqn.py --ticker AAPL --episodes 100
-```
+## Files
 
-### Advanced Training
-```bash
-python train_drqn.py \
-    --ticker AAPL \
-    --episodes 200 \
-    --initial_balance 100000 \
-    --trade_size 10000 \
-    --spread 0.005 \
-    --learning_rate 0.001 \
-    --save_model \
-    --plot
-```
-
-### Multiple Stocks
-```bash
-python train_drqn.py --ticker GOOGL --episodes 150 --save_model
-python train_drqn.py --ticker MSFT --episodes 150 --save_model
-```
-
-## Parameters
-
-### Data Parameters
-- `--ticker`: Stock ticker symbol (default: AAPL)
-- `--start_date`: Start date YYYY-MM-DD (default: 2023-01-01)
-- `--end_date`: End date YYYY-MM-DD (default: today)
-
-### Training Parameters
-- `--episodes`: Number of training episodes (default: 100)
-- `--learning_rate`: Learning rate (default: 0.001)
-- `--gamma`: Discount factor (default: 0.99)
-- `--epsilon`: Initial exploration rate (default: 1.0)
-- `--epsilon_min`: Minimum exploration rate (default: 0.01)
-- `--epsilon_decay`: Exploration decay rate (default: 0.995)
-- `--batch_size`: Training batch size (default: 32)
-- `--memory_size`: Replay memory size (default: 10000)
-
-### Environment Parameters
-- `--initial_balance`: Starting portfolio balance (default: 100000)
-- `--trade_size`: Trade size per transaction (default: 10000)
-- `--spread`: Commission spread (default: 0.005)
-
-### Output Parameters
-- `--log_dir`: Directory for logs and outputs (default: logs)
-- `--print_freq`: Print frequency (default: 10)
-- `--save_model`: Save trained model
-- `--plot`: Generate training plots
-
-## Results
-
-The model learns to:
-- Make profitable trading decisions based on price movements
-- Manage risk through position sizing
-- Adapt to market conditions using LSTM memory
-- Optimize portfolio returns with realistic commissions
-
-## File Structure
-
-```
-drqn-model/
-├── README.md                   # This documentation
-├── requirements.txt            # Python dependencies
-├── train_drqn.py              # CLI training script
-├── validate_drqn.py           # CLI validation script
-├── drqn_trading.ipynb         # Interactive Jupyter notebook
-└── logs/                      # Training outputs (cleaned)
-    ├── tensorboard/           # TensorBoard logs
-    │   └── drqn_AAPL_ep100_lr0.001_bal100000_20251019_144326/
-    │       └── events.out.tfevents.*
-    ├── models/                # Saved models
-    │   └── drqn_AAPL_ep100_lr0.001_bal100000_20251019_144326_model.pt
-    └── results/               # Training results and plots
-        ├── drqn_AAPL_ep100_lr0.001_bal100000_20251019_144326_results.json
-        └── drqn_AAPL_ep100_lr0.001_bal100000_20251019_144326_plot.png
-```
-
-## TensorBoard
-
-View training metrics in real-time:
-```bash
-tensorboard --logdir=logs/tensorboard --port=6006
-```
-
-Then open http://localhost:6006 in your browser.
-
-### Comparing Different Runs
-
-Each training run creates a unique directory with descriptive names:
-- `drqn_AAPL_ep100_lr0.001_bal100000_20240101_120000/` - AAPL, 100 episodes, lr=0.001, balance=100k
-- `drqn_GOOGL_ep200_lr0.0005_bal100000_20240101_130000/` - GOOGL, 200 episodes, lr=0.0005, balance=100k
-
-This makes it easy to:
-- Compare different stocks side-by-side
-- Analyze the effect of hyperparameters
-- Track training progress over time
-- Identify the best performing configurations
-
-## Examples
-
-### Quick Test
-```bash
-python train_drqn.py --ticker AAPL --episodes 10 --print_freq 1
-```
-
-### Full Training with Plots
-```bash
-python train_drqn.py \
-    --ticker AAPL \
-    --episodes 200 \
-    --save_model \
-    --plot \
-    --print_freq 20
-```
-
-### Compare Different Stocks
-```bash
-python3 train_drqn.py --ticker AAPL --episodes 100 --save_model
-python3 train_drqn.py --ticker GOOGL --episodes 100 --save_model
-python3 train_drqn.py --ticker MSFT --episodes 100 --save_model
-```
-
-## Model Validation
-
-Validate trained models on separate datasets:
-
-### Basic Validation
-```bash
-python3 validate_drqn.py --model_path logs/models/drqn_AAPL_ep100_lr0.001_bal100000_20240101_120000_model.pt --ticker AAPL --start_date 2024-01-01 --end_date 2024-12-31 --save_results --plot
-```
-
-### Cross-Validation (Different Stocks)
-```bash
-# Train on AAPL
-python3 train_drqn.py --ticker AAPL --episodes 100 --save_model
-
-# Validate on different stocks
-python3 validate_drqn.py --model_path logs/models/drqn_AAPL_ep100_lr0.001_bal100000_20240101_120000_model.pt --ticker GOOGL --save_results --plot
-python3 validate_drqn.py --model_path logs/models/drqn_AAPL_ep100_lr0.001_bal100000_20240101_120000_model.pt --ticker MSFT --save_results --plot
-```
-
-### Time-Based Validation
-```bash
-# Train on 2023 data
-python3 train_drqn.py --ticker AAPL --start_date 2023-01-01 --end_date 2023-12-31 --episodes 100 --save_model
-
-# Validate on 2024 data
-python3 validate_drqn.py --model_path logs/models/drqn_AAPL_ep100_lr0.001_bal100000_20240101_120000_model.pt --ticker AAPL --start_date 2024-01-01 --end_date 2024-12-31 --save_results --plot
-```
-
-## Validation Metrics
-
-The validation script provides comprehensive metrics:
-
-### Performance Metrics
-- **Total Return**: Model's return percentage
-- **Buy & Hold Return**: Baseline return for comparison
-- **Outperformance**: Model return minus buy & hold return
-- **Final Portfolio Value**: Ending portfolio balance
-
-### Trading Behavior
-- **Action Distribution**: Percentage of bear/hold/bull actions
-- **Action Sequence**: Step-by-step trading decisions
-- **Portfolio Progression**: Portfolio value over time
-
-### Validation Types
-- **Cross-Stock**: Train on one stock, validate on another
-- **Time-Based**: Train on historical data, validate on future data
-- **Out-of-Sample**: Train on training set, validate on test set
-
-## Performance Results
-
-### **Validated Performance (2024 Data):**
-| Stock | Model Return | Buy & Hold | Outperformance |
-|-------|-------------|------------|----------------|
-| **AAPL** | 636.38% | 36.52% | +599.86% |
-| **GOOGL** | 521.45% | 38.91% | +482.54% |
-
-### **Key Achievements:**
-- **✅ Outstanding Returns**: 500%+ outperformance over buy-and-hold
-- **✅ Risk Management**: Learns to use Hold actions when appropriate
-- **✅ Market Adaptation**: Correctly identifies optimal strategies for different market conditions
-- **✅ Generalization**: Works across different stocks and time periods
-- **✅ Action Augmentation**: Successfully learns from all possible actions at each state
-
-## Success Story
-
-This implementation successfully follows the [published DRQN paper](https://github.com/conditionWang/DRQN_Stock_Trading) and achieves the key innovations:
-
-1. **Action Augmentation**: The model evaluates all possible actions (Bear/Hold/Bull) at each state, not just the chosen one
-2. **Proper Reward Structure**: Uses the paper's exact trading logic with borrowed positions
-3. **Volatile Training**: Trains on diverse market conditions (2020-2023) to learn robust strategies
-4. **Outstanding Performance**: Achieves 500%+ outperformance over buy-and-hold baselines
-
-The model correctly learned that in 2024's bull market, buying (Bull) was the optimal strategy, while also using Hold actions when appropriate. This demonstrates successful learning of market-adaptive trading strategies.
+| Path | What |
+| --- | --- |
+| `mom_perp_poc.ipynb` | **The deliverable** — validated 4h MA-crossover trend POC |
+| `data/hyperliquid_4h_core.csv` | Bundled real Hyperliquid 4h OHLC (core perps) |
+| `validation_results/mom_perp_poc_*` | Saved metrics (JSON) + equity-curve plot (PNG) |
+| `drqn_trading.ipynb`, `train_drqn.py`, `validate_drqn.py` | Original DRQN reference reproduction (kept for history; superseded — see findings above) |

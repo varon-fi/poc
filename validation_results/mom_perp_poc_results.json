@@ -1,0 +1,77 @@
+{
+  "strategy": "MA_crossover_24_96_4h",
+  "universe": [
+    "BTC",
+    "ETH",
+    "SOL",
+    "LINK",
+    "ARB",
+    "OP",
+    "HYPER"
+  ],
+  "fee_bps": 4.5,
+  "funding_apr": 0.2,
+  "split_ts": "2026-02-26",
+  "full": {
+    "ret_pct": 33.42,
+    "sharpe": 1.033,
+    "mdd_pct": 28.53,
+    "hit": 0.466,
+    "n": 1493
+  },
+  "test_funded": {
+    "ret_pct": 18.52,
+    "sharpe": 1.587,
+    "mdd_pct": 18.17,
+    "hit": 0.504,
+    "n": 599
+  },
+  "test_nofunding": {
+    "ret_pct": 25.18,
+    "sharpe": 2.025,
+    "mdd_pct": 16.81,
+    "hit": 0.511,
+    "n": 599
+  },
+  "up_market": {
+    "ret_pct": -3.58,
+    "sharpe": 0.122,
+    "mdd_pct": 28.53,
+    "hit": 0.423,
+    "n": 744
+  },
+  "down_market": {
+    "ret_pct": 38.37,
+    "sharpe": 2.099,
+    "mdd_pct": 18.9,
+    "hit": 0.509,
+    "n": 749
+  },
+  "walk_forward_sharpe": [
+    -1.491,
+    -0.198,
+    2.472,
+    2.548,
+    1.317,
+    2.139
+  ],
+  "wf_folds_positive": 4,
+  "baselines": {
+    "buy_hold": {
+      "ret_pct": -19.28,
+      "sharpe": -1.12,
+      "mdd_pct": 36.03,
+      "hit": 0.511,
+      "n": 599
+    },
+    "always_flat": {
+      "ret_pct": 0.0,
+      "sharpe": 0.0
+    }
+  },
+  "caveats": [
+    "~8 months data, mostly one (down/alt-bear) regime",
+    "up-market evidence is a short window; sustained-bull/chop OOS unproven",
+    "paper-probe grade, not validated for capital \u2014 run forward shadow/paper first"
+  ]
+}
