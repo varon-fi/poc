@@ -6,3 +6,10 @@ matplotlib>=3.7.0
 tensorboard>=2.13.0
 jupyter>=1.0.0
 yfinance>=0.2.18
+
+# Forward-validation harness + TA-feature research
+lightgbm>=4.0.0
+scipy>=1.10.0
+# TA-Lib requires the underlying C library (`brew install ta-lib` / `apt install ta-lib`)
+# then: pip install TA-Lib
+TA-Lib>=0.4.0

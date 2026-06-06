@@ -3,3 +3,7 @@ lightning_logs
 runs
 models
 videos
+# forward-validation runtime logs (accumulate where scheduled; harness regenerates)
+forward_results/*.jsonl
+forward_results/*.json
+.claude/
